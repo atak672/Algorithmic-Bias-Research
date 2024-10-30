@@ -1,4 +1,4 @@
-# Algorithmic Bias Research:<br>The Amplification of COVID-19 Bias Online
+# Algorithmic Bias:<br>The Amplification of COVID-19 Bias Online
 
 **⚠️ Trigger Warning (TW):** This project delves into harmful language and slurs encountered online.
 
