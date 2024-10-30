@@ -1,0 +1,579 @@
+---
+title: "Algorithmic Bias Online: The Amplification of COVID-19 Related Racism Online"
+author: "Andrew Takais"
+date: "April 26th, 2024"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-packages, message = FALSE, warning = FALSE, echo = FALSE}
+library(tidyverse)
+library(tidytext)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+library(tm)
+library(stringr)
+library(topicmodels)
+library(ggplot2)
+library(stm)
+library(reshape2)
+library(readr)
+library(sf)
+library(forcats)
+library(knitr)
+tinytex::install_tinytex(force = TRUE)
+```
+
+```{r import-data, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Import Tweet Data
+allTweets <-read_csv("")
+
+#Fixing month conversion -- some are +1
+allTweets <- allTweets %>%
+  mutate(month = str_replace(month, "Apr", "Mar")) %>%
+  mutate(month = str_replace(month, "Aug", "July")) %>%
+  mutate(month = str_replace(month, "Dec", "Nov"))
+
+
+#Import Misinformation Data
+covid_misinformation <- read_csv("")
+```
+
+```{r data-wrangling, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Finding columns of interest in Covid_misinformation
+covid_misinformation <- covid_misinformation %>%
+  select(Reported_On, Title, Publication_Date, Primary_Country, Main_Narrative, Narrative_Description, Motive, Misinfo_Type, Key_Words, Summary)
+```
+
+# Introduction
+
+Expanding into the 21st century, human medical advancement continues to present novel solutions to age-old health paradigms. From new cancer therapies to nanoparticle drug delivery systems, a field of endless improvements targets the variable human condition. Yet, in this age of extreme advancement, Coronavirus seemed to undermine global medical mastery and plummet the world into a modern pandemic that has claimed the lives of over 1.18 million people in The United States alone (CDC). The effectiveness and precision in which COVID-19 spread is, on one side, attributed to the novelty of the virus. With no existing safeguards in place (i.e. vaccines), a highly contagious disease spreads like wildfire in a global community. While this of course presents part of the story, researchers now look back upon the pandemic with new insight: the social construction of COVID-19 worsened the severity and lengthened the duration of the experienced pandemic. Medicine alone cannot prevent the spread. Legislative bodies and their constituents must also make a joint effort, utilizing resources and information provided via credible health organizations such as the CDC. However, the divisive nature of politics, especially within the United States, polarized the issue at hand, leading to the spread of scientific misinformation and racism against Asian Americans that only served to deter anti-pandemic efforts. One serious issue stemming from COVID-19 was the drastic increase in Sinophobic sentiment at the start of the COVID-19 pandemic.
+
+Prejudice forms a major pillar of misinformation that not only puts marginalized groups at further risk of oppression but also perpetuates fallacies in regard to the disease. A scapegoat in this case creates solidarity against an 'opposing' human entity rather than the cause of the pandemic. Bias can both be, and lead to, misinformation due to groups selectively seeking out or interpreting information in a way that supports their own preconceived biases while ignoring contradictory perspectives. This creates a cycle of misinformation that can become very hard to destroy. Stuck in a loop, a group with mutual prejudice continues to reinforce each other's beliefs while growing in their resistance to opposing rhetoric (Muhammad & Matthew, 2022). The effects in regard to COVID-19 can reach even further than oppression against a marginalized group, becoming harmful to society as a whole when the information incorrectly discusses vaccine efficacy, COVID-19 treatments, and the polarized politics surrounding the disease.
+
+In the same similar vein of technological advancement, social media platforms and their underlying algorithms have revolutionized the way information is disseminated and consumed, significantly impacting public health discourse during the COVID-19 pandemic. These platforms, guided by complex algorithms, often prioritize content that maximizes user engagement, which can inadvertently amplify sensationalist and xenophobic narratives. This algorithmic bias, while designed to enhance user experience, has the unintended consequence of promoting content that fuels misinformation and prejudice during critical times. As users interact with and share this biased content, the algorithms learn to promote similar messages, creating a feedback loop that can exacerbate public health crises by undermining trust in scientific authority and fostering division. Understanding the role of social media algorithms in shaping public discourse is crucial for developing more resilient public health strategies and combating the spread of harmful misinformation. Moreover, the lack of effective moderation on these platforms further complicates the challenge, as insufficient oversight allows hate speech and misinformation to proliferate unchecked. This inability to accurately police content not only perpetuates harmful narratives but also hinders efforts to foster a safer and more informed online community.
+
+Diving into the COVID-19 domino effect illuminates new ways in which we can educate the public about global events, possibly navigating around an automatic implicit bias. The goal of this research is to provide exploratory analysis into the increases in Sinophobic sentiment due to COVID-19's initial spread, while quantifying the effect that the progression of time has on the frequency of hateful tweets. Additionally, it will explore how these existing forms of racial bias can be associated with the creation and perpetuation of additional forms of misinformation in regards to the pandemic, such as poor vaccine efficacy. And above all, it will also acknowledge quantifiable limitations that stem from the nature of inference methods.
+
+# COVID & Sinophobia
+
+Sinophobia is defined as the fear or hatred of China or Chinese people. And after COVID-19's identification in Wuhan, China, anti-Chinese sentiments heightened and spread throughout the United States. Hate crimes against Asian Americans increased 77% from 2019 to 2020, with a total of 9,000 violent crimes reported from March 2020 to June 2021 alone (Findling, 2022). While Coronavirus did not necessarily invent sinophobia and anti-Asian hate, it is possible that the pandemic contributed to an increase in prejudice sentiment due to its discovery in China fueling existing bias.
+
+Several studies have performed an initial analysis of the effects of COVID-19 on the perception of Chinese people and China as a country. A notable analysis can be found within Tahmasb's research at Boston University where his team utilized alt-right social media like 4Chan to study Sinophobic sentiment spikes from around December 2019 up until the beginning of the pandemic in late March 2020. The results showed drastic upticks--as much as 250x increases--in the use of slurs against Chinese people beginning in January of 2020. With words such as "Chinese flu" gaining further traction around the same time that WHO declared Coronavirus a global pandemic. But the breadth of these existing analyses do not seem to proceed past what is considered the start of the pandemic in the western world.
+
+Health is a critical topic that remains prevalent in every American's mind, and to put it at risk due to Coronavirus ambiguity invoked national anxiety. While the magnitude of such fears differs from person to person, the prevalence of fear in regard to COVID-19 uncertainty and infection was the highest national fear level observed since the Cold War (Quadros et al., 2021). Additional research shows that a surplus in pandemic related information only serves to reinforce fears and uncertainties (Traczyk et al., 2018). COVID-19 presented many unknowns that simply fueled displaced anxiety. A study led by Thomas Ramsey provides a crucial basis for social commentary with respect to COVID-19. His team investigated the effects of chronic or acute anxiety in a social context, and how feelings of fear can lead to or provoke implicit and explicit bias. Cognitive dissonance may be partially responsible for increased risk perception when there exist pre-existing, anxiety-inducing conditions. The results demonstrate heightened risk perception after experiencing media meant to provoke feelings of uneasiness, with implicit bias against certain racial groups. Such a correlation further solidifies the assumption that the emergence of COVID-19 led to increased negative sentiment toward Chinese people, or more generally, against those of Asian descent.
+
+# The Role of Social Media Algorithms
+
+### How Do These Algorithms Work?
+
+Social media algorithms are pivotal in determining the kind of content that surfaces on our feeds, profoundly shaping our online experiences. At the core of these algorithms are various signals indicating user preferences, such as likes, shares, comments, and the duration of content interaction. These engagements serve as critical inputs, telling the algorithm that the user enjoys a specific type of content, prompting it to prioritize and present more of the same. This feedback loop is designed to enhance user satisfaction by tailoring the content to perceived preferences, thereby increasing the time spent on the platform.
+
+However, the exact workings of these algorithms remain largely opaque due to their proprietary protection. Social media companies guard these algorithms closely, primarily because they are integral to the platform's ability to maximize engagement and, by extension, revenue. Despite the secrecy, it is understood that these algorithms are fundamentally rooted in machine learning principles, utilizing various forms of regression analysis to process and predict user behavior. The simplest forms of these analyses include multiple variable and logistic regression.
+
+Multiple variable regression in social media algorithms involves creating a complex equation that accounts for various significant variables—such as the frequency of interactions with certain types of content that correlate with a continuous output like time spent on the app.These equations can both express various relationships with the output (linear, polynomial, etc) allowing extreme flexibility in the models ability to fit complex data that does not necessarily fit simplistic relationships.
+
+$$
+\text{Time On App} = \beta_0 + \beta_{Likes} \times X_{Likes} + \beta_{Comments} \times X_{Comments} + \beta_3 \times X_{Shares} + \epsilon
+$$
+
+On the other hand, logistic regression is used to represent categorical outcomes, maximizing the probability of a user's actions being correctly assigned to a discrete outcome. In the binary sense, we can represent the output of the model as a probability of being assigned to one of the outcomes. Each user interaction, from a like to a share, is assigned a weight (denoted as $X_{i}$ in statistical models), reflecting its significance in influencing future content recommendations. Logistic regression uses a generic regression equation, mapping its output to a probability using a sigmoid function equation $f: \mathbb{R} \rightarrow (0, 1)$:
+
+$$f(Z) = \frac{1}{1 + e^{-Z}}$$
+
+$$
+Z = \beta_0 + \beta_1x_1 + \beta_2x_2 + \ldots + \beta_nx_n
+$$
+
+### The Bias-Variance Trade-Off
+
+These regression models are not static; they are continuously refined through ongoing processing to better interpret the relationships between significant variables and user responses. The ultimate goal of these machine learning algorithms is predictive accuracy—they are constantly adjusted in response to new data to align the predicted outcomes (i.e. user engagement) as closely as possible to the actual observed behavior. This process of tweaking and testing is essential for the algorithms' ability to deliver increasingly personalized content to users, thus keeping them engaged and connected to the platform and assigning users ads that are most correlated to their interests and engagements.
+
+In the realm of machine learning and statistical science, the bias-variance trade-off is a critical challenge that practitioners must navigate. Within this concept, bias refers to the error introduced by approximating a real-world problem with a simplified model, while variance refers to the error that arises from small fluctuations in the training data set. Essentially, a model with high bias oversimplifies the model, often leading to under-fitting, whereas a model with high variance pays too much attention to training data, leading to over-fitting.
+
+In the context of social media algorithms, the allure of including more variables and richer data sets is clear: such models boast increased complexity and flexibility, which can dramatically reduce bias, allowing for a more nuanced representation of real-world phenomena, and human decisions, in mathematical form. This robustness in capturing underlying patterns means that the model's assumptions align more closely with the intricate realities they aim to replicate. However, this comes at the cost of increased variance, referring to a model's sensitivity to fluctuations in the training data. A model with high variance may perform exceptionally well on the training set but fail to generalize to unseen data, resulting in poor predictive performance.
+
+The extensive data that fuel these sophisticated models, combined with numerous variables presumed to be significantly correlated, can lead to outputs that are challenging to interpret. This lack of interpretability presents substantial obstacles for engineers and data scientists tasked with understanding and fine-tuning the models' decision-making processes. Without clear insight into how these algorithms arrive at specific recommendations or content prioritization, identifying and correcting biases within the model becomes a formidable task. Consequently, while striving to construct algorithms that faithfully reflect the complexity of their tasks, there's a constant battle to maintain the transparency and interpretability essential for identifying and mitigating problematic outputs, particularly in content recommendations that have far-reaching social implications.
+
+The sophistication of these algorithms lies in their capacity to learn and evolve from vast quantities of data. However, this capability also presents challenges, particularly in moderating content and policing hate speech. The reliance on user engagement metrics can inadvertently lead to the amplification of sensationalist or divisive content, which tends to generate significant interaction but is harmful to the social fabric. The ongoing challenge for social media platforms is to balance algorithmic efficiency with the ethical implications of content distribution, ensuring that they contribute positively to public discourse without compromising the quality or safety of the online environment.
+
+### Social Media's Role in Amplifying Racism in the United states
+
+Social media algorithms are powerful tools in determining the visibility and dissemination of content. The Pew Research Center states that around 53% of U.S. adults get their news from social media platforms 'sometimes' or 'often.' In the vast digital landscape of platforms like Facebook, X/Twitter, and YouTube, these algorithms often dictate what becomes is seen and what fades into the background. Unfortunately, these algorithms may have played a role in worsening xenophobia in the United States by highlighting and promoting content laced with bias, misinformation, and racism. Given the sheer volume of data generated on these platforms daily, relying solely on human moderation to monitor and mitigate harmful content is impractical, if not impossible. Consequently, AI has stepped into the role of content moderation. AI systems are programmed to detect and filter out hate speech and misinformation; however, their capacity to do so accurately is not without significant limitations (Forbes Tech Council).
+
+An article on Unite AI by by Alex McFarland notes that the central issue lies in the nuanced nature of language and the complexity of social discourse. Social media feeds are rife with irony, sarcasm, cultural references, and idiomatic expressions—subtleties that current AI models, despite their advancement, often struggle to interpret correctly. Efforts to refine these AI-driven hate speech detection algorithms are continual, with researchers aiming to create adaptive models that can keep pace with evolving online discourse (Unite AI). Despite their progress, these algorithms face the formidable task of balancing moderation with the protection of free speech, sometimes erring on the side of caution and allowing harmful speech to slip through or, conversely, over-censoring and suppressing legitimate expression.
+
+The pandemic's role in this scenario has highlighted extreme issues with automatic moderation. Misinformation related to COVID-19 has proliferated at an alarming rate, propagating racist sentiments and fostering an environment conducive to xenophobia. As sensational and emotionally charged content typically generates more engagement, the algorithms may inadvertently prioritize and amplify such content, given its propensity to keep users on the platform (PubMed). This leads one to question whether the extreme uptick in COVID-19 related content present on social media since the early 2020s, as well as the lack of efficient content moderation, perpetuated misinformation and racism in online spaces.
+
+### Case Study: Anti-Semiticism in Online Spaces
+
+Before diving into a more quantitative investigation of COVID-19, we can see a similar issue unfolding in online spaces with the rise of anti-Muslim and anti-Semitic sentiments.
+
+Following the October 7th, 2023 attacks, there was an alarming surge in online antisemitic and Islamophobic content, with social media platforms like X (formerly Twitter) experiencing significant increases in hate speech. According to a New York Times article titled "Antisemitic and Anti-Muslim Hate Speech Surges Across the Internet," the hash tag #HitlerWasRight was used in over 46,000 posts in just one month, a stark increase from less than 5,000 mentions in previous months. This spike is part of a broader 919% increase in antisemitic content on X during the same period. The complexities of these issues are deepened as platforms struggle to distinguish between anti-Zionism and antisemitism, often blurring the lines in moderation policies.
+
+On the other side, the same NYT article notes that the hash tag #LevelGaza also saw a dramatic increase in usage on X, with nearly 3,000 mentions, up from less than a dozen the previous month. There was also a significant presence of hash tags like #MuslimPig and #KillMuslims. Meanwhile, platforms like TikTok and Facebook acted to remove flagged content. Some content arose as difficult to detect with traditional methods, as users included veiled hate speech references, such as referring to Adolf Hitler as an "Austrian painter" rather than his name, circumnavigating automatic detection systems . TikTok removed over 730,000 videos violating its hate speech policies within a week. X did not comment, while Meta referred to its policy enforcement blog post. Platforms like TikTok and Meta provided a public statement after this hate was brought to their attention by the times, while X/Twitter refused to comment or reveal if any further moderation was conducted.
+
+# Quantitative Analysis of COVID-19 Related Content
+
+### Goals
+
+As discussed above, social media can become a breeding ground for hate and misinformation. And through past events, X/Twitter has failed to publicly state additional efforts to curve hate speech on their platform or reveal current content moderation algorithms. Additionally, since Twitter was purchased by Elon Musk in 2022, content moderation policies have been further relaxed (Ingram, 2022). The following analysis will be primarily concerned with content on X (at the time named Twitter), and COVID-19 related tweets on the platform from 2020 to 2022.
+
+### Datasets
+
+The data is primarily concerned with tweet data and text analysis. Tweets were pulled from IEEEDataPort which provided the Tweet IDs for all COVID-19 related tweets within the given time frame: March 20th - March 31th. Due to Twitter API regulations, the CSV download only contained associated IDs which were then hydrated with the provided data via Hydrator. The breadth of the data presented upwards to 2 billion tweets, but the collection process faced the rate limitations of the Twitter API. Tweet information was only collected on a monthly basis for three months a year (March, July, and November) for both 2020 and 2021. And an additional set for March 2022. The main variables of interest are the tweet's time stamp, the user's location, and the text of the tweet. There are a total of 99,321 tweets in the data set representing tweets between March 20th, 2020 and March 31st, 2022.
+
+Additionally, a COVID-19 misinformation data set is used that collects sources of misinformation and their classifications from many media sources such as news outlets or social media. This data was obtained from a Princeton University empirical studies research team. The set utilizes many variables, but the most important ones are concerned with the classifications of misinformation and the text of the source itself.
+
+Lastly, a data set from Pew Research was employed in order to obtain the political leanings of U.S. states. This included each state and its political leaning on the American political binary as a decimal.
+
+### Hypothesis
+
+Following the stated information, the following hypothesis are assumed:
+
+1). As time progresses within the pandemic, the frequency of prejudiced tweets will decrease as a general trend and the degree of prejudice within tweets (sentiment score) will follow this decrease as well. There will be minor upticks during moments of high infection rates (i.e. Omicron) but will overall remain on a decline.
+
+As discussed, fear surrounding the pandemic may invoke or allow pre-existing biases to become rationalized in the heads of their conceptionists. But there exists a sort of burn out that can occur in parallel to the progression of the pandemic. Research by Stevens et al. displays that people become increasingly desensitized to COVID-19 related news as time progresses. As the death tolls increased, it was found that participants became less and less concerned. This desensitization effect could justify why the initial biases associated with the fear of the unknown slowly decrease over time.
+
+2). There will be sub-trends in which geographical locations tweets are sent from. States associated with more Republican views will possess a higher frequency of biased tweets and a, on average, higher sentiment score, indicating more hateful language within the tweets.
+
+Throughout the pandemic, COVID-19 has become increasingly politically polarized (Jungkunz, 2021). With a history of extreme nationalism and an 'America first' rhetoric, the Republican party has made its voice known to strictly oppose further government lock downs as to preserve one's quality of life. Additionally, research shows that some politicians actively engaged in passing the blame towards China while actively vetoing pandemic deterring legislation. So this may imply that states and locations that have higher rates of Republican ideology will express more bias due to its normalization among the state's citizens and leaders (Silver, et al., 2020).
+
+3). The most frequent category of misinformation that prejudiced COVID-19 tweets will be grouped into will correspond to what the existing literature considers as the biggest failure of the United States COVID-19 response.
+
+This assumption reaches back into the discussion of echo chambers and the self-reinforcement of incorrect ideology as found by Muhammad and Mathew, researchers at the Indian Institute of Technology.
+
+4). Geographical location (as gauged by Republican or Democrat state leanings), time period, and class of misinformation can validly and significantly predict the bias sentiment score in a COVID-19 related tweet as per the previous justifications.
+
+### Methods
+
+Prior to investigating further the legitimacy of the stated hypothesis, the research needs a dictionary of derogatory values that are associated with Asian and Chinese hate. This will require text analysis according to a vector of words that contain what this paper deems derogatory and prejudiced words. These words were obtained via extensive literature research and were compiled from the mentioned study by Tahmasbi and a New York Times Article by Kathy Hong.
+
+The following, adapted figure shows the justification of word choice due to their drastic uptick once COVID-19 was declared a pandemic by WHO:
+
+<center>
+
+![Figure Adapted from Tahmasbi et al.](images/extracted_2.jpg){width="459"}
+
+</center>
+
+With the following dictionary, text analysis will be conducted on the data set of extracted tweets between March 2020 and March 2022. These tweets will be screened for the mentioned words and given a sentiment score. For each word above contained in the tweet, the score will be incremented by one. This includes duplicate mentions of the same word. Only tweets deemed 'derogatory' (sentiment score \>= 1) will be included to assess the magnitude of tweets overtime. With this, Two visualizations were produced. One counts the number of biased tweets within each respective month/year grouping to assess the true frequency of biased tweets while the alternate plot displays the average of sentiment scores for those same groupings. The latter represents an attempt to quantify the degree of prejudice within each tweet itself and to show this over the same time period.
+
+```{r dictionary-words, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Develop and Create Dictionary
+derogatory_terms <- data.frame(
+  word=c("chink", "chinese", "china", "kungflu", "chinavirus", "oriental", "gook", "asshoe", "chingchong", "bugmen",
+                      "insectoid", "chankroo", "chinazi"), 
+ 
+  category=c("derogatory", "derogatory", "derogatory", "derogatory", "derogatory" ,"derogatory", "derogatory", "derogatory", "derogatory", "derogatory", "derogatory", "derogatory", "derogatory")
+  )
+
+derogatory_terms %>%
+  mutate(Derogatory_Words = word) %>%
+  select(Derogatory_Words)
+```
+
+The subsequent analysis took into account the geographical location of the tweets. Once again, this will look into both the number of prejudiced tweets within a given grouping and the average of the sentiment score within that same category The grouping here however is by state in the United States. Once these variables were measured, additional data was obtained from Pew Research that linked each state to their political leanings. Geometric visualizations were displayed to show biased tweet frequency and average sentiment score on a state-by-state basis. An associated graph with political leanings was also produced to draw side-by-side conclusions between the prejudiced tweets at hand and possible political associations. Lastly, locations provided via the Twitter data were standardized in terms of geographical location. To facilitate the process, location was restricted to only the United States, and prejudice tweets with a sentiment score of at least 1 were included. Names of states and cities were then standardized. This also allows the incorporation of a political orientation assessment that can add on to the ideas of bias being studied.
+
+Then, topic modeling was performed to assess if noticeable trends within the bias tweets' word content could produce additional topics that hint at additional misinformation, such as denial of vaccine efficacy. A model with 20 topics was produced. Due to the high frequency of the words China and Chinese, as well as apparent similarities between topics, the resultant groups did not produce conclusive results. The model was generated by including and removing the words China and Chinese, but results were not very organized in terms of content. The models were generated alongside the data set from Princeton that performed a similar method of text analysis to gather topics from all sources of media that represented methods of COVID-19 misinformation. The structural topic model's metadata was fed and trained on variables that represented party affiliation based on geographical location and the (month year) time period format of a Tweet's time stamp.
+
+Lastly, a multivariate linear model was used to assess the significance in the relationship between the assessed variables and the degree of bias within Tweets. As the analysis based on misinformation was rather inconclusive, the only variables used in the model are political party (an extension on geographical location) and time period (month year). The significance of each variable was assessed and explored. The model was only made to predict degree of bias within Tweets as this was the least consistent variable in both the geographical and time period analysis. This will be used to make the final claim on validity of hypothesis one.
+
+Within this analysis, a majority of the generalizations will only apply to the United States. As the research only considers tweets with a base-line of bias, and a majority of these tweets had American geo-tags, the results cannot be applied on a global basis.
+
+# Results & Discussion
+
+### Tweet Frequency and Sentiment Score Results
+
+The results for the first analysis, and for part of the first hypothesis, seem to be split in terms of conclusions. In terms of prejudiced tweet frequency, there definitely exists a sharp incline in Tweets employing what this study has deemed 'prejudiced' language. This incline correlates with the start of the pandemic in March 2020. This now expands beyond Boston University's inequity study and shows that the trend their team noticed beginning in March 2020 continues for several months into the pandemic. The magnitude of tweets nearly halves between July 2020 and November 2020 (122 to 62), with this lower trend continuing throughout the remainder of the data. There do exist additional spikes in prejudice Tweet frequency. This can be seen starting in November 2020 and continuing to March 2021, as well as a slight upwards trend beginning around November 2021. These spikes may be related to the state of the pandemic during those time periods; COVID-19 numbers fluctuate depending on infection rates. Early 2021 saw the gradual roll out of Coronavirus vaccinations which were met with hesitancy due to fears associated with their expedited approval (Larson, et al., 2021). These sentiments, as well as rising infection rates, could lead to a re-invocation of bias similar to the start of the pandemic, but to a lesser magnitude. A similar story could be told for the transition from July 2021 to November 2021, where after large vaccination participation, the Omicron COVID-19 variant began to seemingly revert current progress in the eyes of the public (CDC, 2022).
+
+The results for average sentiment score across these same time periods tells a different story. Instead of a gradual decrease in the degree of prejudice per Tweet, there seems to be a gradual increase up until around the beginning of 2022. This implies that while the overall number of biased Tweets may decrease over the course of the pandemic due to reevaluation and further education of the disease, the biased tweets that remain can be, on average, even more biased. This hints at the existence of the mentioned cycle of misinformation and bias that may reinforce problematic opinions in an echo chamber. There is also a similar upwards trend that exists from July 2021 to the beginning of the year 2022 that most likely represents the mass infection rates produced by Omicron and the resultant re-invocation of health anxiety.
+
+So while the former provides support for part of the first hypothesis (overall decrease in bias frequency), the second result contradicts the latter half of the first hypothesis that believed the degree of bias within tweets (sentiment score) will decrease with time as well.
+
+```{r frequency-counts, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Examining transition into Covid-19
+url_pattern <- "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
+
+allTweets <- allTweets %>%
+  mutate(cleaned = str_replace_all(tweets_copy, url_pattern, ""))
+
+#Get sentiment score for tweets and mutate hours
+sentiment_scores <- allTweets %>%
+  mutate(tweets_copy = cleaned) %>%
+  unnest_tokens(word, cleaned, token = "tweets") %>%
+  left_join(derogatory_terms, on = "word") %>%
+  mutate(ind_score = ifelse(category == "derogatory", 1)) %>%
+  mutate(ind_score = replace(ind_score, is.na(ind_score), 0)) %>%
+  group_by(tweets_copy, month, year, user_location) %>%
+  summarize(total = sum(ind_score))
+```
+
+```{r exploratory-visualization, message = FALSE, warning = FALSE, echo = FALSE}
+
+date_orderings <- c(
+  "Mar 2020"=1,
+  "Jul 2020"=2,
+  "Nov 2020"=3,
+  "Mar 2021"=4,
+  "Jul 2021"=5,
+  "Nov 2021"=6,
+  "Mar 2022"=7
+)
+
+temp_scores  <- sentiment_scores %>%
+  mutate(month_year = paste(month, year)) %>%
+  mutate(num = date_orderings[month_year])
+
+#Plot Tweet Magnitudes
+temp_scores %>%
+  filter(total != 0) %>%
+  group_by(month_year, num) %>%
+  count() %>%
+  ggplot(aes(x = month_year, y = n, group = 1)) +
+  geom_line() + 
+  scale_x_discrete(limits =c("Mar 2020", "Jul 2020", "Nov 2020", "Mar 2021", "Jul 2021", "Nov 2021", "Mar 2022")) +
+  labs(
+    title = "Change in Prejudice Tweet Frequency Overtime During COVID-19 Pandemic", 
+    x = "Time Period",
+    y = "Biased Tweet Frequency"
+  )
+
+#Plot Sentiment Scores
+temp_scores %>%
+  filter(total != 0) %>%
+  #mutate(month_year = paste(month, year)) %>%
+  group_by(month_year) %>%
+  summarize(avg_score = mean(total)) %>%
+  ggplot(aes(x = month_year, y = avg_score, group = 1)) +
+  geom_line() + 
+  scale_x_discrete(limits =c("Mar 2020", "Jul 2020", "Nov 2020", "Mar 2021", "Jul 2021", "Nov 2021", "Mar 2022")) +
+  labs(
+    title = "Change in Average Tweet Sentiment Score Overtime",
+    subtitle = "During the COVID-19 Pandemic",
+    x = "Time Period",
+    y = "Biased Tweet Average Sentiment Score"
+  )
+  
+```
+
+### Geographical Results
+
+With the geographical data of the tweets, one can see trends between United States location and magnitude and degree of prejudice within tweets. The top five states with the highest frequency of tweets with biased language are Texas, Florida, Nebraska, Indiana, and Ohio, each with at least 40 tweets considered biased in the utilized snapshot of COVID-19 data. Additionally, the top five states with the highest average sentiment score are Illinois, Nebraska, South Carolina, Georgia, and Florida. While there exists some overlap, the overall relationship between location and degree and magnitude of biased tweets is assessed based on the political leanings of the states. One concern for this type of analysis is the differing population values among U.S. states. For example, Florida has a much higher population than Nebraska, which could lead to more tweets, and more biased tweets. But we can see from doing both the magnitude analysis and degree of bias analysis that an intersection exists that hints that political leanings may outweigh the possible effects of population distribution.
+
+```{r state-party-analysis, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Converts State Abbreviations to State Names
+rename_state_abb <- function(states){
+  ret <- character(length(states))
+  for (idx in 1:length(states)){
+    ret[idx] = state.name[grep(states[idx], state.abb)]    
+  }
+  return(ret)
+}
+
+states_geo_data <- st_read("C:/Users/atak6/OneDrive/Documents/SOCIO_data/cb_2020_us_state_20m.shp", quiet = TRUE)
+
+#On a state basis to assess geographical trends
+State_values <- sentiment_scores %>%
+  mutate(month_year = paste(month, year)) %>%
+  filter(total != 0) %>%
+  group_by(user_location) %>%
+  summarize(avg_score = mean(total)) %>%
+  arrange(desc(avg_score)) %>%
+  mutate(states_abb = substring(user_location, nchar(user_location) - 1,nchar(user_location))) %>%
+  mutate(locations = rename_state_abb(states_abb))
+
+#On a state basis to assess geographical trends
+State_values_2 <- sentiment_scores %>%
+  mutate(month_year = paste(month, year)) %>%
+  filter(total != 0) %>%
+  group_by(user_location) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  mutate(states_abb = substring(user_location, nchar(user_location) - 1,nchar(user_location))) %>%
+  mutate(locations = rename_state_abb(states_abb))
+
+
+State_values_2 %>%
+  head(6) %>%
+  ggplot(aes(reorder(locations, n), n)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Frequency of Biased Tweets By State", 
+    y = "Biased Tweet Frequency",
+    x = "State"
+  )
+
+State_values %>%
+  head(6) %>%
+  ggplot(aes(reorder(locations, avg_score), avg_score)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Average Sentiment Score of Biased Tweets By State", 
+    y = "Biased Tweet Average Sentiment Score",
+    x = "State"
+  )
+```
+
+**Note:** a frequency of 0 does not necessarily imply that some states truly have no prejudice Tweets. As stated, there are limitations in the pulling of tweet data, and smaller periods of time were randomly accessed to attempt to see the breadth of public sentiment. States indicated with a sentiment score of 0 may just not have been recorded extensively within the days collected for this study.
+
+The first visualization below displays the geographical frequency of biased tweets on a state-by-state basis. The darker the fill, the higher the frequency of tweets recorded within the two year pandemic period. This information can be compared to a map that represents political leanings of states in the U.S.
+
+```{r party-map, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Map Distribution of Scores in the United States
+
+total_data <- left_join(states_geo_data, State_values_2, by = c("NAME" = "locations")) %>%
+  mutate(n = replace(n, is.na(n), 0)) %>%
+  filter(NAME != "Puerto Rico") %>%
+  filter(NAME != "Hawaii") %>%
+  filter(NAME != "Alaska")
+
+
+total_data %>%
+  ggplot() + 
+  geom_sf(aes(fill = n)) +
+  scale_fill_gradient(low = "#f7fbff", high = "#08306b") +
+ labs(
+    title = "Biased Tweet Frequency By State", 
+    fill  = "Tweet Frequency"
+  ) +
+  theme_bw()
+```
+
+```{r party-comparison, message = FALSE, warning = FALSE, echo = FALSE}
+
+party_data <- read_csv("")
+
+party_leaning <- left_join(states_geo_data, party_data, by = c("NAME" = "State")) %>%
+  mutate(num_rep = as.numeric(sub("%", "", repub_perc)) / 100) %>%
+  mutate(num_dem = as.numeric(sub("%", "", dem_perc)) / 100) %>%
+  mutate(diff = num_rep - num_dem) %>%
+  filter(NAME != "Puerto Rico") %>%
+  filter(NAME != "Hawaii") %>%
+  filter(NAME != "Alaska")
+
+
+party_leaning %>%
+  ggplot() + 
+  geom_sf(aes(fill = diff)) +
+  scale_fill_gradient2(low = "#0015BC", high = "#DE0100", midpoint = 0) +
+ labs(title = "Party Affiliation By State", subtitle = "Republicans (Red) vs. Democrats(Blue)", fill  = "Party Leaning") +
+  theme_bw()
+```
+
+Upon first glance, one can see that many of the more darkly shaded states are associated with being more Republican leaning states. This can imply that those states with a higher frequency of prejudiced tweets are associated with more conservative ideology. These states not only typically vote Republican, but possess Republican leaders and representatives. During the pandemic, many Republicans expressed widespread cynicism towards the pandemic, vaccinations, and China (Knox, 2022). Additionally, the extreme nationalism echoed within the party itself has been shown to lead to and exude xenophobic attitudes that may be perpetuated in states with non-diversified political opinions (Britannica). This implies that states that are more Republican leaning, will express more negative bias towards Chinese people and Asian-Americans based on their tweets during the pandemic.
+
+Similar to the first set of analysis, the average sentiment score of each state does not completely follow this same trend of political party association.
+
+```{r party-map-2, message = FALSE, warning = FALSE, echo = FALSE}
+
+#Map Distribution of Scores in the United States
+
+total_data <- left_join(states_geo_data, State_values, by = c("NAME" = "locations")) %>%
+  mutate(avg_score = replace(avg_score, is.na(avg_score), 0)) %>%
+  filter(NAME != "Puerto Rico") %>%
+  filter(NAME != "Hawaii") %>%
+  filter(NAME != "Alaska")
+
+
+total_data %>%
+  ggplot() + 
+  geom_sf(aes(fill = avg_score)) +
+  scale_fill_gradient(low = "#f7fbff", high = "#08306b") +
+ labs(
+    title = "Average Biased Tweet Sentiment Score By State", 
+    fill  = "Tweet Frequency"
+  ) +
+  theme_bw()
+  
+```
+
+When considering the average, the results are a little more inconclusive when it comes to political leaning. Additional 'blue' states (like California) are now highlighted, and they possess a relatively high sentiment score average. One can see that even though the averages of Democratic states are on par with those of Republican states, the frequencies do not reflect this. This implies there exists possible outlier tweets for these geographical locations that possess higher sentiment scores. So while it may be rarer to find an individual in California that exudes racism against Chinese individuals because of COVID-19, the ones that do exist will be just as biased as those in other states.
+
+From these results, it seems that political leanings of a U.S. state may only imply possible tweet frequency, with the average sentiment score being a little inconclusive when calculated using geographical data. This supports the second hypothesis but contradicts the belief that Republican states will possess both the highest frequencies and highest degree of prejudice, as they only comply with the former. So again, only part of the second hypothesis holds after analysis.
+
+### Topic Modeling and Misinformation
+
+The structured topic model did not provide enough evidence to determine a tweet's association with an additional category of misinformation, possibly implying that just because someone exudes some bias does not mean they participate in and perpetuate other biases. The only possible theme is the use of the word vaccine below in topic 13, but there is no sufficient way to distinguish between possible vaccine campaigns and oppositions based on this text analysis alone. So the third hypothesis that biased tweets will be associated with other forms of misinformation as described in the literature is inconclusive. Additionally, there is no way to determine if the misinformation contained in the tweets outside of racial bias hint at the biggest failures in education during the COVID-19 pandemic response.
+
+```{r topic-modeling, message = FALSE, warning = FALSE, echo = FALSE, results = 'hide', fig.keep='all'}
+
+state_info <- party_leaning %>%
+  mutate(party = ifelse(diff < 0, "Democrat", "Republican"))
+
+#Creating metadata for TM
+curr_data <- sentiment_scores %>%
+  filter(total != 0) %>%
+  mutate(states_abb = substring(user_location, nchar(user_location) - 1,nchar(user_location))) %>%
+  mutate(locations = rename_state_abb(states_abb)) %>%
+  #mutate(tweets_copy = str_remove_all(tweets_copy, "China")) %>%
+  #mutate(tweets_copy = str_remove_all(tweets_copy, "Chinese")) %>%
+  mutate(month_year = paste(month, year)) %>%
+  left_join(state_info, by = c("locations" = "NAME")) %>%
+  select(tweets_copy, month_year, total, party)
+
+#textprocessor
+processed <- textProcessor(curr_data$tweets_copy, metadata = curr_data)
+
+#prepdocuments
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta)
+docs <- out$documents
+vocab <- out$vocab
+meta <-out$meta
+
+
+
+#stm
+Q5_stm <- stm(documents = out$documents, vocab = out$vocab, 
+              K = 20, prevalence = ~month_year + party,
+              max.em.its = 75, data = out$meta,
+              init.type = "Spectral")
+
+
+#plot
+plot(Q5_stm)
+
+```
+
+```{r topic-modeling-2, message = FALSE, warning = FALSE, echo = FALSE, results = 'hide', fig.keep='all'}
+
+#Creating metadata for TM
+curr_data <- sentiment_scores %>%
+  filter(total != 0) %>%
+  mutate(states_abb = substring(user_location, nchar(user_location) - 1,nchar(user_location))) %>%
+  mutate(locations = rename_state_abb(states_abb)) %>%
+  mutate(tweets_copy = str_remove_all(tweets_copy, "China")) %>%
+  mutate(tweets_copy = str_remove_all(tweets_copy, "Chinese")) %>%
+  mutate(month_year = paste(month, year)) %>%
+  left_join(state_info, by = c("locations" = "NAME")) %>%
+  select(tweets_copy, month_year, total, party)
+
+#textprocessor
+processed <- textProcessor(curr_data$tweets_copy, metadata = curr_data)
+
+#prepdocuments
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta)
+docs <- out$documents
+vocab <- out$vocab
+meta <-out$meta
+
+
+
+#stm
+Q5_stm <- stm(documents = out$documents, vocab = out$vocab, 
+              K = 20, prevalence = ~month_year + party,
+              max.em.its = 75, data = out$meta,
+              init.type = "Spectral")
+
+
+#plot
+plot(Q5_stm)
+
+
+#Misinformation Dataset
+covid_misinformation %>%
+  mutate(Main_Narrative = str_replace(Main_Narrative, "Emergency response", "Emergecy Response")) %>%
+  mutate(Main_Narrative = str_replace(Main_Narrative, "Government responses", "Government Responses")) %>%
+  group_by(Main_Narrative) %>%
+  count() %>%
+  arrange(n) %>%
+  filter(n != 339)
+
+```
+
+### Predicting Degree Bias With A Linear Model to Assess Hypothesis One Uncertainties
+
+Due to the inconclusive nature of the analysis of sentiment score for the second hypothesis, and the inability to draw concrete connections between racial bias due to COVID-19 and additional types of misinformation, the following model will only predict possible sentiment scores within Tweets based on political leanings (an extension of geographic location) and a (month year) time period. The results show that the variables are not significant, with p-values much greater than the alpha level 0.05. The only significant predictor of sentiment score is whether the tweet was published in November 2021. This once again most likely relates to Omicron and the subsequent infection rate spike that occurred at the end of the year 2021. This mostly likely results from the re-emergence of drastic pandemic policies as well as the increased publication of COVID-19 knowledge and information. This loops back to the study led by Traczyk that highlighted the correlation between fear and surplus pandemic info. This fear could then lead to more bias, as shown throughout this study.
+
+```{r linear-model, message = FALSE, warning = FALSE, echo = FALSE}
+#Created model
+model_df <- curr_data
+
+# fit the full model with all the variables
+m <- lm(total ~ month_year + party, data=model_df)
+m %>% summary()
+
+```
+
+# Conclusion
+
+The research and results ultimately deviated from expectations and usefulness. While it appears that the data partially satisfies part of hypothesis 1 and 2, 3 and 4 remain inconclusive and incorrect.
+
+The frequency of biased Tweets throughout the pandemic was the most consistent variable among all tests and visualizations. It showed a definite spike at the start of the pandemic in March 2020, with a drastic drop and slight fluctuations for the remainder of the two year period. As mentioned, these spikes most likely correspond to rises in infection rates due to new COVID-19 variants, such as Omicron. When considering the desensitization hypothesis that reinforced the justification for hypothesis 1, it appears that desensitization is a very reasonable explanation for this drop in prejudice tweets. This trend however is inverted when considering the degree of bias within each respective Tweet. This proposes the idea that while overall bias is decreasing, the extent of individual bias may be only reinforcing itself. This leads back to the dangers of misinformation and prejudice, as it is a self-reinforcing cycle that may only serve to enhance incorrect opinions about marginalized populations. And while desensitization has been looked at throughout the COVID-19 pandemic, it makes one wonder whether an individual can possess a resistance to desensitization due to their own confirmation bias. If true, this could impact how people approach global, or even personal, crises.
+
+While the results show evidence that political affiliation also plays a part in the magnitude of biased tweets, it is important to look at all the data. Yes, Republicans and their representatives throughout the pandemic have expressed problematic ideology that enhanced prejudice towards Asian Americans. The mapping provided above displays this in a new light utilizing Twitter as a medium for analysis. But this alone does not include all biases invoked due to the pandemic. One can see that sentiment/bias scores also exist in some of the most Democratic states (i.e. California). But while this may seem like less of a concern due to the drastically lower frequency, it exists as bias nonetheless. Issues have to be resolved in all edge cases and discrimination must be held accountable. Hypothesis 2 displaying some truth provides a starting point for how to address a core of the anti-Asian COVID-19 prejudice, but it does not justify dealing with just one side of the issue. Additionally, as seen with the linear model, party alone cannot significantly predict sentiment scores, implying that other factors and those of many backgrounds can publish hateful content on Twitter.
+
+And while the structural topic model did not shed more light onto the rippling nature of misinformation and racial bias, its inability to do so could provide insight into the classification of bias and the grouping of content. The line between classifications of misinformation/bias could be too fine to pull out from such tweet data. Or in a sense, the misinformation that can be an offshoot of racial bias may simply not be distinct enough to identify it as intended. For example, say someone speaks wrongly about the origin of the disease, or the inefficacy of masking. If their justification latches onto these existing biases, the categorical distinction may not be sufficient enough to define unique sets, as seen in the theme collected by Princeton University. I was only looking at Tweets that exude bias, so possessing more general COVID-19 data to effectively assess misinformation trends could be more effective.
+
+COVID-19 represents the epitome of a modern medical crisis. On a global scale, the pandemic completely reshaped the lives of every person on Earth. But it represents only one example of how human health has been used to justify prejudice and bias. The research discussed here continues and expands upon research regarding the initial racial effects of COVID-19, and the results display that the prejudice invoked by the pandemic have long-lasting and far-reaching effects. Other diseases like Ebola also show localized racial issues when it comes to health. Back in 2014 at the height of the Ebola epidemic in Africa, discrimination and prejudice towards black people drastically elevated. The presence of Ebola increased racial profiling and fed into the already existing biases of black people in the western world. They experienced being denied admittance to events and institutions on the basis of their skin or accent, but this time it is 'justified' due to the disease. Ebola became completely associated with blackness to the extent of dismissal and discrimination (BBC, 2014). Marginalized and oppressed groups already fight racism that is only enhanced by these instances of disease outbreaks.
+
+A rather recent example of a health crisis was the global outbreak of Monkey pox. With most cases being concentrated in gay men, the narrative almost immediately spun into anti-LGBT rhetoric. And while highlight the groups most at risk is important, attributing and wrongfully classifying an illness based on discriminating against sexual orientation creates further divides and puts such communities at higher risks of hate crimes (Findling, 2022). An extremely harmful aspect of this discrimination was the public misconception that Monkey pox was a sexual transmitted infection. Such incorrect information puts even more people at risk and could possibly lead to a pandemic level threat.
+
+It is important to internalize the lessons that COVID-19 taught to the world, in terms of both medical advancement and social interactions. To acknowledge the racial inequity provoked by COVID-19 on a global scale, will better equip humanity to deal with future health threats in a way that pits humans against the virus, rather than humans against other humans. COVID-19 was a great equalizer, and it is time society realizes that.
+
+In the future, this study could be expanded to encompass health crises like Monkey pox and Ebola, to understand bias among its multiple instances and characterizations. Additionally, better standardization and wrangling of the geographic data could shift the research to a global basis, allowing one to analyze these outbreaks and diseases on a global social scale and among more variables. Are some countries more biased than others? Is there a difference based on the proximity to a designated country (i.e. China). Using the data on a global scale, and for multiple diseases, could make it more general and applicable to pandemics of the future.
+
+# Moving Towards the Future
+
+-Promising research with improving.
+
+-California legislation with Elon Musk required to release moderation
+
+-Focusing on inference–understanding true relationship
+
+-How I could improve my data– using more tweets and possible refining sentiment scores
+
+# Ethics & Limitations
+
+-Need to add info regarding my use of mathematical modeling. I am reducing a complex and multifaceted issue to simply NLP. This does not necessarily attribute meaning to words but simply their magnitude, resulting in the extrapolation of meaning. What if the tweet was not necessarily negative but weaponize a word in the nature of calling out hatred?
+
+The research employed, as well as the API utilized to collect said data, of course has its limitations. The COVID-19 tweet data set collected from IEEE possessed nearly 2 billion COVID-19 related tweets, starting from October 2019 to December 2022. While in theory, the totality of this problem set could provide amazing insight, the sheer amount of data points made it unrealistic to use every tweet. Additionally, rate limits with Tweet hydration led to only using around 100,000 tweets from the same randomly selected months (March, July, November). Picking only 90 out of 365 days in both 2020 and 2021, and only 30 days in 2022, creates only a snapshot of possible data that could lead to incorrect and ineffective conclusions. With more time and resources, a true randomization on a daily basis could be much better to capture the true breadth of the tweet content. But this requires more data and more precision when it comes to randomness.
+
+There also existed limitations when looking into geographical data on Twitter. The IEEE has a larger database that contains all COVID-19 related Tweets since October 2019, but as not all geographical data is available for every Tweet, there exists a smaller database with a smaller number of Tweets that this research employed. This ensured that a large majority of the data used had an attached geographical tag. Also, a lot of the geo-tags of biased tweets only related to locations within the United States. So that portion of the research was restricted to the U.S.A. Additionally, there existed a lack of standardization among geo-tags. With some Tweets including just a city, some just a name, some just the country, etc. This was dealt with as precisely as possible, mainly targeting those that at least had state information. These were then standardized for analysis. So some of the state data may also be missing possible data points.
+
+Lastly, the relatively small bank of Tweets in which analysis was performed on did not include a large number of 'biased' tweets. So research was conducted in that small subset as to not drastically depress values. Due to the nature of text analysis, there is no true way to distinguish between hateful tweets and tweets participating in racial discourse. So in this case, tweets that were not meant as derogatory, but contained the flagged terms, may have been grouped into biased tweets.
+
+# References
+
+Centers for Disease Control and Prevention. "United States Covid-19 Cases and Deaths by State over Time." Centers for Disease Control and Prevention, Centers for Disease Control and Prevention, 13 Mar. 2022, <https://data.cdc.gov/Case-Surveillance/United-States-COVID-19-Cases-and-Deaths-by-State-o/9mfq-cb36/data>.
+
+Findling, M. (2022). COVID-19 Has Driven Racism And Violence Against Asian Americans: Perspectives From 12 National Polls. Health Affairs. <https://www.healthaffairs.org/do/10.1377/forefront.20220411.655787/>
+
+Jungkunz, S. (2021). Political Polarization During the COVID-19 Pandemic. Frontiers. <https://www.frontiersin.org/articles/10.3389/fpos.2021.622512/full>
+
+Knox, O., & Anders, C. (2022). Analysis \| There's bipartisan potential on China, if the GOP wants it. The Washington Post. <https://www.washingtonpost.com/politics/2022/12/15/theres-bipartisan-potential-china-if-gop-wants-it/>
+
+Lamsal, R. (2019). Coronavirus Geo-Tagged Tweets. IEEEDataPort. <https://ieee-dataport.org/open-access/coronavirus-covid-19-geo-tagged-tweets-dataset>
+
+Mazer, B. (2022). COVID Science Is Moving Backwards. The Atlantic. <https://www.theatlantic.com/science/archive/2022/12/covid-science-data-bivalent-vaccines-paxlovid/672378/>
+
+Party affiliation by state - Religion in America: U.S. Religious Data, Demographics and Statistics. (2021). Pew Research Center. <https://www.pewresearch.org/religion/religious-landscape-study/compare/party-affiliation/by/state/>
+
+Powell, A. (2022). Is pandemic finally over? We asked the experts. Harvard Gazette. <https://news.harvard.edu/gazette/story/2022/10/is-pandemic-finally-over-we-asked-the-experts/>
+
+Ramsey, T. (2012). Fear bias. RUcore. Retrieved December 16, 2022, from <https://doi.org/doi:10.7282/T30V8BQ9>
+
+Stevens, Hannah R, et al. "Desensitization to Fear-Inducing COVID-19 Health News on Twitter: Observational Study." JMIR Infodemiology, JMIR Publications Inc., Toronto, Canada, 31 Dec. 2020, <https://infodemiology.jmir.org/2021/1/e26876>.
+
+Silver, L., & Delvin, K. (2020). US views of China more negative among Republicans than Democrats in mid-2020. Pew Research Center. <https://www.pewresearch.org/fact-tank/2020/07/30/republicans-see-china-more-negatively-than-democrats-even-as-criticism-rises-in-both-parties/>
+
+Traczyk, Jakub, et al. "Does Fear Increase Search Effort in More Numerate People? an Experimental Study Investigating Information Acquisition in a Decision from Experience Task." Frontiers, Frontiers, 3 Aug. 2018, <https://www.frontiersin.org/articles/10.3389/fpsyg.2018.01203/full>.
+
+Zurcher, A. (2014). Ebola, race and fear. BBC. <https://www.bbc.com/news/blogs-echochambers-29714657>
